@@ -39,7 +39,11 @@ AI 就会按照 skill 里的规范，输出角色卡 + 分镜表 + 逐镜头提�
 如果你已经有分镜表 CSV 和角色卡 JSON：
 
 ```bash
+# 默认即梦/可灵格式（自然语言长句）
 python scripts/batch_generate.py storyboard.csv characters.json -o prompts.md -s 甜宠
+
+# LiblibAI / Stable Diffusion 格式（逗号关键词 + 英文质量词）
+python scripts/batch_generate.py storyboard.csv characters.json -o prompts.md -s 古风 --platform liblib
 ```
 
 参数说明：
@@ -47,6 +51,7 @@ python scripts/batch_generate.py storyboard.csv characters.json -o prompts.md -s
 - `characters.json`：角色卡文件（格式见下方）
 - `-o prompts.md`：输出文件路径
 - `-s 甜宠`：题材风格（可选：甜宠 / 爽文 / 悬疑 / 古风 / 都市 / 校园）
+- `--platform`：提示词格式，`jimeng`（默认，即梦/可灵长句）或 `liblib`（SD 系关键词）
 
 ---
 
@@ -110,32 +115,42 @@ novel-to-manhua-prompt/
 ### 分镜表 CSV 格式
 
 ```csv
-shot_id,shot_type,camera_move,scene_desc,dialogue,duration,mood,characters
-001,远景,固定,夜晚城市天际线,旁白：...,5,孤独,
-002,中近景,缓慢推近,苏晚坐在咖啡馆靠窗位置,无,4,温柔,苏晚
+shot_id,scene_id,shot_type,camera_move,view_angle,action,scene_desc,dialogue,duration,mood,characters
+001,cafe,远景,固定,平视,,傍晚街景细雨,旁白：...,4,孤独,
+002,cafe,中近景,缓慢推近,平视,低头吹咖啡睫毛低垂,苏晚坐在靠窗位置,无,4,温柔思念,苏晚
+003,cafe,大特写,固定,平视,眼睛缓缓睁大瞳孔微震,,无,2,震惊,苏晚
 ```
 
 字段说明：
 - `shot_id`：镜号（三位数）
-- `shot_type`：景别（远景/中景/特写等）
-- `camera_move`：运镜（固定/推/拉/摇等）
-- `scene_desc`：画面描述
+- `scene_id`：场景组标识，同一场景填同一个值，脚本自动让后续镜头继承首镜头环境描述
+- `shot_type`：景别（远景/中景/特写/大特写等）
+- `camera_move`：运镜（固定/推/缓慢推近/拉/摇/环绕/手持/骤停等）
+- `view_angle`：视角（平视/俯视/仰视/过肩/第一人称），可留空默认平视
+- `action`：角色动作表情（具体可视觉化，如「低头吹咖啡，睫毛低垂」）
+- `scene_desc`：环境描述，同场景首镜头写全，后续可留空自动继承
 - `dialogue`：台词或旁白
 - `duration`：时长（秒）
-- `mood`：情绪
-- `characters`：出场角色（多个用英文逗号分隔）
+- `mood`：情绪词，自动匹配光影（温柔/震惊/孤独/暧昧/爽感/悬疑等）
+- `characters`：出场角色（多个用英文逗号分隔，顺序决定左右站位）
 
-### 角色卡 JSON 格式
+### 角色卡 JSON 格式（推荐新格式）
 
 ```json
 {
   "苏晚": {
-    "appearance": "年轻女性，约25岁，黑色长直发，杏仁眼，鹅蛋脸，皮肤白皙，身材纤细",
-    "outfit": "燕麦色宽松毛衣，深色牛仔裤",
-    "style": "韩漫美女脸"
+    "age": "25岁左右",
+    "gender": "女",
+    "face_lock": "杏仁眼，鹅蛋脸，皮肤白皙，鼻梁小巧，左眼下方一颗小泪痣",
+    "hair_lock": "黑色长直发，齐刘海，发尾自然微卷",
+    "body_lock": "身材纤细，身高165cm左右",
+    "outfit": "燕麦色宽松毛衣，深色牛仔裤，白色帆布鞋",
+    "style": "韩漫美女脸，唯美厚涂风"
   }
 }
 ```
+
+脚本会**按景别自动裁剪锁词**：特写只用 face_lock + hair_lock，全景才用全量。旧版 `appearance` 字段也能兼容读取。
 
 ---
 
